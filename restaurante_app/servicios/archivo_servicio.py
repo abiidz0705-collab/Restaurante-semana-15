@@ -1,39 +1,61 @@
 import json
-import os
+from pathlib import Path
 
 class ArchivoServicio:
-    BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-    DIR_DATOS = os.path.join(BASE_DIR, "datos")
-    
-    RUTA_PRODUCTOS = os.path.join(DIR_DATOS, "productos.json")
-    RUTA_USUARIOS = os.path.join(DIR_DATOS, "usuarios.json")
-
     def __init__(self):
-        if not os.path.exists(self.DIR_DATOS):
-            os.makedirs(self.DIR_DATOS, exist_ok=True)
+        self.ruta_datos = Path(__file__).resolve().parent.parent / "datos"
+        self.ruta_datos.mkdir(exist_ok=True)
+        self.archivo_productos = self.ruta_datos / "productos.json"
+        self.archivo_usuarios = self.ruta_datos / "usuarios.json"
+        self.archivo_ventas = self.ruta_datos / "ventas.json"
 
-    def cargar_productos(self) -> list:
-        if not os.path.exists(self.RUTA_PRODUCTOS):
+    def cargar_productos(self):
+        if not self.archivo_productos.exists():
             return []
         try:
-            with open(self.RUTA_PRODUCTOS, "r", encoding="utf-8") as f:
+            with open(self.archivo_productos, "r", encoding="utf-8") as f:
                 return json.load(f)
-        except Exception:
+        except Exception as e:
+            print(f"Error al cargar productos: {e}")
             return []
 
-    def guardar_productos(self, lista_productos: list) -> bool:
+    def guardar_productos(self, lista_productos):
         try:
-            with open(self.RUTA_PRODUCTOS, "w", encoding="utf-8") as f:
-                json.dump(lista_productos, f, ensure_ascii=False, indent=4)
-            return True
-        except Exception:
-            return False
+            with open(self.archivo_productos, "w", encoding="utf-8") as f:
+                json.dump(lista_productos, f, indent=4, ensure_ascii=False)
+        except Exception as e:
+            print(f"Error al guardar productos: {e}")
 
-    def cargar_usuarios(self) -> list:
-        if not os.path.exists(self.RUTA_USUARIOS):
+    def cargar_usuarios(self):
+        if not self.archivo_usuarios.exists():
             return []
         try:
-            with open(self.RUTA_USUARIOS, "r", encoding="utf-8") as f:
+            with open(self.archivo_usuarios, "r", encoding="utf-8") as f:
                 return json.load(f)
-        except Exception:
+        except Exception as e:
+            print(f"Error al cargar usuarios: {e}")
             return []
+
+    def guardar_usuarios(self, lista_usuarios):
+        try:
+            with open(self.archivo_usuarios, "w", encoding="utf-8") as f:
+                json.dump(lista_usuarios, f, indent=4, ensure_ascii=False)
+        except Exception as e:
+            print(f"Error al guardar usuarios: {e}")
+
+    def cargar_ventas(self):
+        if not self.archivo_ventas.exists():
+            return []
+        try:
+            with open(self.archivo_ventas, "r", encoding="utf-8") as f:
+                return json.load(f)
+        except Exception as e:
+            print(f"Error al cargar ventas: {e}")
+            return []
+
+    def guardar_ventas(self, lista_ventas):
+        try:
+            with open(self.archivo_ventas, "w", encoding="utf-8") as f:
+                json.dump(lista_ventas, f, indent=4, ensure_ascii=False)
+        except Exception as e:
+            print(f"Error al guardar ventas: {e}")

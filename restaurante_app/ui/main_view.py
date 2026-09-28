@@ -1,204 +1,288 @@
 import tkinter as tk
 from tkinter import ttk, messagebox
+from pathlib import Path
+from PIL import Image, ImageTk
 
-class MainView(ttk.Frame):
-    def __init__(self, parent, restaurante_servicio, on_logout):
-        super().__init__(parent)
-        self.servicio = restaurante_servicio
-        self.on_logout = on_logout
+class MainView:
+    def __init__(self, root, servicio, usuario_actual="admin", app_controller=None):
+        self.root = root
+        self.servicio = servicio
+        self.usuario_actual = usuario_actual
+        self.app_controller = app_controller
+
+        self.root.title("Sistema de Gestión de Restaurante")
+        self.root.geometry("900x600")
+
+        self.ruta_assets = Path(__file__).resolve().parent.parent / "assets"
 
         self._crear_interfaz()
+        self._cargar_datos_tablas()
+
+    def _obtener_ruta_imagen(self, nombres_posibles):
+        for nombre in nombres_posibles:
+            ruta = self.ruta_assets / nombre
+            if ruta.exists():
+                return ruta
+        return None
+
+    def _cargar_icono(self, nombres):
+        ruta = self._obtener_ruta_imagen(nombres)
+        if ruta:
+            try:
+                img = Image.open(ruta)
+                img = img.resize((20, 20), Image.Resampling.LANCZOS)
+                return ImageTk.PhotoImage(img)
+            except Exception as e:
+                print(f"Error icono: {e}")
+        return None
 
     def _crear_interfaz(self):
-        # Header / Barra superior
-        header_frame = ttk.Frame(self, padding=10)
-        header_frame.pack(fill="x", side="top")
+        # Frame superior para usuario y botón de cerrar sesión
+        frame_top = ttk.Frame(self.root, padding=10)
+        frame_top.pack(fill="x", side="top")
 
-        lbl_titulo = ttk.Label(
-            header_frame, 
-            text="Sistema de Gestión - Restaurante App", 
-            font=("Arial", 14, "bold")
-        )
-        lbl_titulo.pack(side="left")
+        lbl_user = ttk.Label(frame_top, text=f"Usuario activo: {self.usuario_actual}", font=("Helvetica", 10, "bold"))
+        lbl_user.pack(side="left")
 
-        btn_logout = ttk.Button(
-            header_frame, 
-            text="Cerrar Sesión", 
-            command=self.on_logout
-        )
+        btn_logout = ttk.Button(frame_top, text="Cerrar Sesión", command=self._cerrar_sesion)
         btn_logout.pack(side="right")
 
-        # Contenedor principal de pestañas
-        notebook = ttk.Notebook(self)
-        notebook.pack(fill="both", expand=True, padx=10, pady=10)
+        self.notebook = ttk.Notebook(self.root)
+        self.notebook.pack(expand=True, fill="both", padx=10, pady=10)
 
-        # Pestaña 1: Productos (CRUD Completo)
-        tab_productos = ttk.Frame(notebook)
-        notebook.add(tab_productos, text="Productos")
-        self._construir_tab_productos(tab_productos)
+        # Iconos de las pestañas
+        self.icon_prod = self._cargar_icono(["icon_producto.png", "icon_producto.png.png"])
+        self.icon_user = self._cargar_icono(["icon_usuario.png", "icon_usuario.png.png", "usuario.png"])
+        self.icon_vent = self._cargar_icono(["icon_venta.png", "icon_venta.png.png"])
 
-        # Pestaña 2: Usuarios (Consulta)
-        tab_usuarios = ttk.Frame(notebook)
-        notebook.add(tab_usuarios, text="Usuarios Registrados")
-        self._construir_tab_usuarios(tab_usuarios)
+        self.tab_productos = ttk.Frame(self.notebook)
+        self.tab_usuarios = ttk.Frame(self.notebook)
+        self.tab_ventas = ttk.Frame(self.notebook)
 
-        # Pestaña 3: Ventas (Pendiente)
-        tab_ventas = ttk.Frame(notebook)
-        notebook.add(tab_ventas, text="Ventas (Pendiente)")
-        self._construir_tab_ventas(tab_ventas)
+        if self.icon_prod:
+            self.notebook.add(self.tab_productos, text=" Productos", image=self.icon_prod, compound="left")
+        else:
+            self.notebook.add(self.tab_productos, text="Productos")
 
-    def _construir_tab_productos(self, parent):
-        # Panel Izquierdo: Formulario en LabelFrame
-        frame_form = ttk.LabelFrame(parent, text=" Formulario de Producto ", padding=10)
+        if self.icon_user:
+            self.notebook.add(self.tab_usuarios, text=" Usuarios", image=self.icon_user, compound="left")
+        else:
+            self.notebook.add(self.tab_usuarios, text="Usuarios")
+
+        if self.icon_vent:
+            self.notebook.add(self.tab_ventas, text=" Ventas", image=self.icon_vent, compound="left")
+        else:
+            self.notebook.add(self.tab_ventas, text="Ventas")
+
+        self._construir_tab_productos()
+        self._construir_tab_usuarios()
+        self._construir_tab_ventas()
+
+    def _construir_tab_productos(self):
+        frame_form = ttk.LabelFrame(self.tab_productos, text="Datos del Producto", padding=10)
         frame_form.pack(side="left", fill="y", padx=10, pady=10)
 
-        ttk.Label(frame_form, text="ID / Código:").grid(row=0, column=0, sticky="w", pady=5)
-        self.txt_id = ttk.Entry(frame_form, width=20)
-        self.txt_id.grid(row=0, column=1, pady=5)
+        ttk.Label(frame_form, text="ID Producto:").pack(anchor="w")
+        self.ent_p_id = ttk.Entry(frame_form)
+        self.ent_p_id.pack(fill="x", pady=(0, 10))
 
-        ttk.Label(frame_form, text="Nombre:").grid(row=1, column=0, sticky="w", pady=5)
-        self.txt_nombre = ttk.Entry(frame_form, width=20)
-        self.txt_nombre.grid(row=1, column=1, pady=5)
+        ttk.Label(frame_form, text="Nombre:").pack(anchor="w")
+        self.ent_p_nombre = ttk.Entry(frame_form)
+        self.ent_p_nombre.pack(fill="x", pady=(0, 10))
 
-        ttk.Label(frame_form, text="Precio ($):").grid(row=2, column=0, sticky="w", pady=5)
-        self.txt_precio = ttk.Entry(frame_form, width=20)
-        self.txt_precio.grid(row=2, column=1, pady=5)
+        ttk.Label(frame_form, text="Precio ($):").pack(anchor="w")
+        self.ent_p_precio = ttk.Entry(frame_form)
+        self.ent_p_precio.pack(fill="x", pady=(0, 10))
 
-        ttk.Label(frame_form, text="Categoría:").grid(row=3, column=0, sticky="w", pady=5)
-        self.txt_categoria = ttk.Entry(frame_form, width=20)
-        self.txt_categoria.grid(row=3, column=1, pady=5)
+        ttk.Label(frame_form, text="Categoría:").pack(anchor="w")
+        self.ent_p_cat = ttk.Entry(frame_form)
+        self.ent_p_cat.pack(fill="x", pady=(0, 15))
 
-        # Contenedor de Botones (usando padding en lugar de pady)
-        frame_botones = ttk.Frame(frame_form, padding=(0, 10))
-        frame_botones.grid(row=4, column=0, columnspan=2)
+        btn_add = ttk.Button(frame_form, text="Agregar Producto", command=self._guardar_producto)
+        btn_add.pack(fill="x", pady=2)
 
-        ttk.Button(frame_botones, text="Registrar", command=self._registrar_producto).grid(row=0, column=0, padx=2, pady=2)
-        ttk.Button(frame_botones, text="Consultar", command=self._consultar_producto).grid(row=0, column=1, padx=2, pady=2)
-        ttk.Button(frame_botones, text="Actualizar", command=self._actualizar_producto).grid(row=1, column=0, padx=2, pady=2)
-        ttk.Button(frame_botones, text="Eliminar", command=self._eliminar_producto).grid(row=1, column=1, padx=2, pady=2)
-        ttk.Button(frame_botones, text="Limpiar", command=self._limpiar_formulario).grid(row=2, column=0, columnspan=2, pady=5, sticky="ew")
+        btn_del = ttk.Button(frame_form, text="Eliminar Producto", command=self._eliminar_producto)
+        btn_del.pack(fill="x", pady=2)
 
-        # Panel Derecho: Tabla de visualización Treeview
-        frame_tabla = ttk.LabelFrame(parent, text=" Lista de Productos ", padding=10)
-        frame_tabla.pack(side="right", fill="both", expand=True, padx=10, pady=10)
+        frame_tabla = ttk.Frame(self.tab_productos, padding=10)
+        frame_tabla.pack(side="right", expand=True, fill="both")
 
-        columnas = ("id", "nombre", "precio", "categoria")
-        self.tabla_prod = ttk.Treeview(frame_tabla, columns=columnas, show="headings")
-        self.tabla_prod.heading("id", text="ID")
-        self.tabla_prod.heading("nombre", text="Nombre")
-        self.tabla_prod.heading("precio", text="Precio ($)")
-        self.tabla_prod.heading("categoria", text="Categoría")
+        cols = ("ID", "Nombre", "Precio", "Categoría")
+        self.tree_prod = ttk.Treeview(frame_tabla, columns=cols, show="headings")
+        for col in cols:
+            self.tree_prod.heading(col, text=col)
+            self.tree_prod.column(col, width=120, anchor="center")
 
-        self.tabla_prod.column("id", width=60, anchor="center")
-        self.tabla_prod.column("nombre", width=140)
-        self.tabla_prod.column("precio", width=80, anchor="e")
-        self.tabla_prod.column("categoria", width=100)
+        scrollbar = ttk.Scrollbar(frame_tabla, orient="vertical", command=self.tree_prod.yview)
+        self.tree_prod.configure(yscrollcommand=scrollbar.set)
+        self.tree_prod.pack(side="left", expand=True, fill="both")
+        scrollbar.pack(side="right", fill="y")
 
-        scroll = ttk.Scrollbar(frame_tabla, orient="vertical", command=self.tabla_prod.yview)
-        self.tabla_prod.configure(yscrollcommand=scroll.set)
+    def _construir_tab_usuarios(self):
+        frame_form = ttk.LabelFrame(self.tab_usuarios, text="Registrar Usuario", padding=10)
+        frame_form.pack(side="left", fill="y", padx=10, pady=10)
 
-        self.tabla_prod.pack(side="left", fill="both", expand=True)
-        scroll.pack(side="right", fill="y")
+        ttk.Label(frame_form, text="ID Usuario / Cédula:").pack(anchor="w")
+        self.ent_u_id = ttk.Entry(frame_form)
+        self.ent_u_id.pack(fill="x", pady=(0, 10))
 
-        self._cargar_tabla_productos()
+        ttk.Label(frame_form, text="Nombre Completo:").pack(anchor="w")
+        self.ent_u_nombre = ttk.Entry(frame_form)
+        self.ent_u_nombre.pack(fill="x", pady=(0, 10))
 
-    def _cargar_tabla_productos(self):
-        for item in self.tabla_prod.get_children():
-            self.tabla_prod.delete(item)
+        ttk.Label(frame_form, text="Correo Electrónico:").pack(anchor="w")
+        self.ent_u_email = ttk.Entry(frame_form)
+        self.ent_u_email.pack(fill="x", pady=(0, 15))
+
+        btn_add_u = ttk.Button(frame_form, text="Guardar Usuario", command=self._guardar_usuario)
+        btn_add_u.pack(fill="x", pady=2)
+
+        frame_tabla = ttk.Frame(self.tab_usuarios, padding=10)
+        frame_tabla.pack(side="right", expand=True, fill="both")
+
+        cols = ("ID Usuario", "Nombre", "Correo")
+        self.tree_user = ttk.Treeview(frame_tabla, columns=cols, show="headings")
+        for col in cols:
+            self.tree_user.heading(col, text=col)
+            self.tree_user.column(col, width=150, anchor="center")
+
+        scrollbar = ttk.Scrollbar(frame_tabla, orient="vertical", command=self.tree_user.yview)
+        self.tree_user.configure(yscrollcommand=scrollbar.set)
+        self.tree_user.pack(side="left", expand=True, fill="both")
+        scrollbar.pack(side="right", fill="y")
+
+    def _construir_tab_ventas(self):
+        frame_form = ttk.LabelFrame(self.tab_ventas, text="Registrar Nueva Venta", padding=10)
+        frame_form.pack(side="left", fill="y", padx=10, pady=10)
+
+        ttk.Label(frame_form, text="ID Usuario / Cliente:").pack(anchor="w")
+        self.ent_v_usuario = ttk.Entry(frame_form)
+        self.ent_v_usuario.insert(0, self.usuario_actual)
+        self.ent_v_usuario.pack(fill="x", pady=(0, 10))
+
+        ttk.Label(frame_form, text="ID Producto:").pack(anchor="w")
+        self.ent_v_producto = ttk.Entry(frame_form)
+        self.ent_v_producto.pack(fill="x", pady=(0, 15))
+
+        btn_venta = ttk.Button(frame_form, text="Procesar Venta", command=self._procesar_venta)
+        btn_venta.pack(fill="x", pady=5)
+
+        frame_tabla = ttk.Frame(self.tab_ventas, padding=10)
+        frame_tabla.pack(side="right", expand=True, fill="both")
+
+        cols = ("ID Venta", "Usuario", "Producto", "Total ($)", "Fecha")
+        self.tree_ventas = ttk.Treeview(frame_tabla, columns=cols, show="headings")
+        for col in cols:
+            self.tree_ventas.heading(col, text=col)
+            self.tree_ventas.column(col, width=120, anchor="center")
+
+        scrollbar = ttk.Scrollbar(frame_tabla, orient="vertical", command=self.tree_ventas.yview)
+        self.tree_ventas.configure(yscrollcommand=scrollbar.set)
+        self.tree_ventas.pack(side="left", expand=True, fill="both")
+        scrollbar.pack(side="right", fill="y")
+
+    def _cargar_datos_tablas(self):
+        for i in self.tree_prod.get_children():
+            self.tree_prod.delete(i)
         for p in self.servicio.obtener_productos():
-            p_id = getattr(p, "id_prod", getattr(p, "id", ""))
-            p_cat = getattr(p, "categoria", "General")
-            self.tabla_prod.insert("", "end", values=(p_id, p.nombre, f"{p.precio:.2f}", p_cat))
+            p_id = getattr(p, "id", getattr(p, "id_producto", ""))
+            cat = getattr(p, "categoria", "General")
+            self.tree_prod.insert("", "end", values=(p_id, p.nombre, f"${p.precio:.2f}", cat))
 
-    def _limpiar_formulario(self):
-        self.txt_id.delete(0, tk.END)
-        self.txt_nombre.delete(0, tk.END)
-        self.txt_precio.delete(0, tk.END)
-        self.txt_categoria.delete(0, tk.END)
+        for i in self.tree_user.get_children():
+            self.tree_user.delete(i)
+        if hasattr(self.servicio, "obtener_usuarios"):
+            for u in self.servicio.obtener_usuarios():
+                u_id = getattr(u, "identificacion", getattr(u, "usuario", getattr(u, "id", "")))
+                u_nom = getattr(u, "nombre", "")
+                u_email = getattr(u, "correo", getattr(u, "email", ""))
+                self.tree_user.insert("", "end", values=(u_id, u_nom, u_email))
 
-    def _registrar_producto(self):
-        exito, msg = self.servicio.registrar_producto(
-            self.txt_id.get().strip(),
-            self.txt_nombre.get().strip(),
-            self.txt_precio.get().strip(),
-            self.txt_categoria.get().strip()
-        )
+        for i in self.tree_ventas.get_children():
+            self.tree_ventas.delete(i)
+        for v in self.servicio.obtener_ventas():
+            self.tree_ventas.insert("", "end", values=(
+                getattr(v, "id_venta", ""),
+                getattr(v, "usuario_nombre", getattr(v, "usuario_id", "")),
+                getattr(v, "producto_nombre", getattr(v, "producto_id", "")),
+                f"${getattr(v, 'total', 0.0):.2f}",
+                getattr(v, "fecha", "")
+            ))
+
+    def _guardar_producto(self):
+        p_id = self.ent_p_id.get().strip()
+        nom = self.ent_p_nombre.get().strip()
+        prec = self.ent_p_precio.get().strip()
+        cat = self.ent_p_cat.get().strip()
+
+        exito, msj = self.servicio.registrar_producto(p_id, nom, prec, cat)
         if exito:
-            messagebox.showinfo("Éxito", msg)
-            self._cargar_tabla_productos()
-            self._limpiar_formulario()
+            messagebox.showinfo("Éxito", msj)
+            self._cargar_datos_tablas()
+            self.ent_p_id.delete(0, tk.END)
+            self.ent_p_nombre.delete(0, tk.END)
+            self.ent_p_precio.delete(0, tk.END)
+            self.ent_p_cat.delete(0, tk.END)
         else:
-            messagebox.showwarning("Error", msg)
-
-    def _consultar_producto(self):
-        id_prod = self.txt_id.get().strip()
-        if not id_prod:
-            messagebox.showwarning("Atención", "Ingrese un ID de producto para consultar.")
-            return
-        prod = self.servicio.buscar_producto_por_id(id_prod)
-        if prod:
-            self._limpiar_formulario()
-            p_id = getattr(prod, "id_prod", getattr(prod, "id", ""))
-            p_cat = getattr(prod, "categoria", "General")
-            self.txt_id.insert(0, p_id)
-            self.txt_nombre.insert(0, prod.nombre)
-            self.txt_precio.insert(0, str(prod.precio))
-            self.txt_categoria.insert(0, p_cat)
-            messagebox.showinfo("Encontrado", f"Producto '{prod.nombre}' cargado en el formulario.")
-        else:
-            messagebox.showerror("Error", "No se encontró ningún producto con ese ID.")
-
-    def _actualizar_producto(self):
-        exito, msg = self.servicio.actualizar_producto(
-            self.txt_id.get().strip(),
-            self.txt_nombre.get().strip(),
-            self.txt_precio.get().strip(),
-            self.txt_categoria.get().strip()
-        )
-        if exito:
-            messagebox.showinfo("Éxito", msg)
-            self._cargar_tabla_productos()
-            self._limpiar_formulario()
-        else:
-            messagebox.showwarning("Error", msg)
+            messagebox.showerror("Error", msj)
 
     def _eliminar_producto(self):
-        id_prod = self.txt_id.get().strip()
-        if not id_prod:
-            messagebox.showwarning("Atención", "Ingrese el ID del producto que desea eliminar.")
+        sel = self.tree_prod.selection()
+        if not sel:
+            messagebox.showwarning("Atención", "Seleccione un producto de la tabla para eliminar.")
             return
-        if messagebox.askyesno("Confirmar", f"¿Está seguro de eliminar el producto con ID {id_prod}?"):
-            exito, msg = self.servicio.eliminar_producto(id_prod)
-            if exito:
-                messagebox.showinfo("Éxito", msg)
-                self._cargar_tabla_productos()
-                self._limpiar_formulario()
+
+        item = self.tree_prod.item(sel[0])
+        p_id = item["values"][0]
+
+        exito, msj = self.servicio.eliminar_producto(str(p_id))
+        if exito:
+            messagebox.showinfo("Éxito", msj)
+            self._cargar_datos_tablas()
+        else:
+            messagebox.showerror("Error", msj)
+
+    def _guardar_usuario(self):
+        u_id = self.ent_u_id.get().strip()
+        nom = self.ent_u_nombre.get().strip()
+        email = self.ent_u_email.get().strip()
+
+        if hasattr(self.servicio, "registrar_usuario"):
+            exito, msj = self.servicio.registrar_usuario(u_id, nom, email)
+        else:
+            exito, msj = False, "El servicio no tiene configurado el registro de usuarios."
+
+        if exito:
+            messagebox.showinfo("Éxito", msj)
+            self._cargar_datos_tablas()
+            self.ent_u_id.delete(0, tk.END)
+            self.ent_u_nombre.delete(0, tk.END)
+            self.ent_u_email.delete(0, tk.END)
+        else:
+            messagebox.showerror("Error", msj)
+
+    def _procesar_venta(self):
+        u_id = self.ent_v_usuario.get().strip()
+        p_id = self.ent_v_producto.get().strip()
+
+        exito, msj = self.servicio.registrar_venta(u_id, p_id)
+        if exito:
+            messagebox.showinfo("Éxito", msj)
+            self._cargar_datos_tablas()
+            self.ent_v_producto.delete(0, tk.END)
+        else:
+            messagebox.showerror("Error", msj)
+
+    def _cerrar_sesion(self):
+        if messagebox.askyesno("Cerrar Sesión", "¿Está seguro de que desea cerrar sesión?"):
+            if self.app_controller:
+                self.app_controller.reiniciar_a_login()
             else:
-                messagebox.showerror("Error", msg)
-
-    def _construir_tab_usuarios(self, parent):
-        frame_tabla = ttk.LabelFrame(parent, text=" Usuarios Registrados ", padding=10)
-        frame_tabla.pack(fill="both", expand=True, padx=10, pady=10)
-
-        columnas = ("id", "nombre", "correo")
-        tabla = ttk.Treeview(frame_tabla, columns=columnas, show="headings")
-        tabla.heading("id", text="Identificación")
-        tabla.heading("nombre", text="Nombre Completo")
-        tabla.heading("correo", text="Correo Electrónico")
-
-        for u in self.servicio.obtener_usuarios():
-            tabla.insert("", "end", values=(u.identificacion, u.nombre, u.correo))
-
-        tabla.pack(fill="both", expand=True)
-
-    def _construir_tab_ventas(self, parent):
-        frame_info = ttk.Frame(parent, padding=20)
-        frame_info.pack(fill="both", expand=True)
-
-        lbl = ttk.Label(
-            frame_info, 
-            text="Módulo de Ventas en desarrollo.\nEsta funcionalidad se integrará en las siguientes semanas.", 
-            font=("Arial", 11, "italic"),
-            justify="center"
-        )
-        lbl.pack(expand=True)
+                for widget in self.root.winfo_children():
+                    widget.destroy()
+                from ui.login_view import LoginView
+                def on_success(usr):
+                    for w in self.root.winfo_children():
+                        w.destroy()
+                    MainView(self.root, self.servicio, usr)
+                LoginView(self.root, self.servicio, on_success).pack(expand=True, fill="both")

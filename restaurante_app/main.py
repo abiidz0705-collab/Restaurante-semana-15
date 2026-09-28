@@ -1,55 +1,52 @@
-import tkinter as tk
+import sys
 from pathlib import Path
 
-from servicios.archivo_servicio import ArchivoServicio
-import tkinter as tk
-from pathlib import Path
+# Agregar el directorio raíz del proyecto al sys.path
+ruta_raiz = Path(__file__).resolve().parent
+sys.path.insert(0, str(ruta_raiz))
 
-from servicios.archivo_servicio import ArchivoServicio
+import tkinter as tk
 from servicios.restaurante_servicio import RestauranteServicio
 from ui.login_view import LoginView
 from ui.main_view import MainView
 
-class AplicacionRestaurante:
+class App:
     def __init__(self):
         self.root = tk.Tk()
-        self.root.title("Restaurante App - Tkinter")
-        self.root.geometry("700x480")
-        self.root.minsize(600, 440)
+        self.root.title("Sistema de Gestión de Restaurante - Login")
+        self.root.geometry("450x450")
 
-        ruta_base = Path(__file__).resolve().parent
-        archivo_servicio = ArchivoServicio()
-        self.restaurante_servicio = RestauranteServicio()
+        # Cargar icono de la ventana principal si existe
+        ruta_ico = ruta_raiz / "assets" / "icon.ico"
+        if not ruta_ico.exists():
+            ruta_ico = ruta_raiz / "assets" / "icon.ico.ico"
+        if ruta_ico.exists():
+            try:
+                self.root.iconbitmap(str(ruta_ico))
+            except Exception:
+                pass
 
-        self.vista_actual = None
+        self.servicio = RestauranteServicio()
         self.mostrar_login()
 
-    def cambiar_vista(self, nueva_vista):
-        if self.vista_actual is not None:
-            self.vista_actual.destroy()
-
-        self.vista_actual = nueva_vista
-        self.vista_actual.pack(fill="both", expand=True)
-
     def mostrar_login(self):
-        vista = LoginView(
-            self.root,
-            self.restaurante_servicio,
-            self.mostrar_interfaz_principal
-        )
-        self.cambiar_vista(vista)
+        for widget in self.root.winfo_children():
+            widget.destroy()
+        self.root.geometry("450x450")
+        self.login_view = LoginView(self.root, self.servicio, self.iniciar_aplicacion_principal)
+        self.login_view.pack(expand=True, fill="both")
 
-    def mostrar_interfaz_principal(self):
-        vista = MainView(
-            self.root,
-            self.restaurante_servicio,
-            self.mostrar_login
-        )
-        self.cambiar_vista(vista)
+    def iniciar_aplicacion_principal(self, usuario):
+        for widget in self.root.winfo_children():
+            widget.destroy()
+        MainView(self.root, self.servicio, usuario, app_controller=self)
 
-    def ejecutar(self):
+    def reiniciar_a_login(self):
+        self.mostrar_login()
+
+    def run(self):
         self.root.mainloop()
 
 if __name__ == "__main__":
-    app = AplicacionRestaurante()
-    app.ejecutar()
+    app = App()
+    app.run()
